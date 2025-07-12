@@ -8,34 +8,10 @@ fetch('enc.txt')
       result += String.fromCharCode(charCode);
     });
 
-    // Taruh ke div sementara
-    let tempDiv = document.createElement('div');
-    tempDiv.innerHTML = result;
-
-    // Append semua link rel=stylesheet
-    tempDiv.querySelectorAll('link[rel="stylesheet"]').forEach(link => {
-      document.head.appendChild(link);
-    });
-
-    // Append semua script src
-    tempDiv.querySelectorAll('script[src]').forEach(oldScript => {
-      let newScript = document.createElement('script');
-      newScript.src = oldScript.src;
-      document.body.appendChild(newScript);
-    });
-
-    // Eksekusi semua inline script
-    tempDiv.querySelectorAll('script:not([src])').forEach(oldScript => {
-      let newScript = document.createElement('script');
-      newScript.textContent = oldScript.textContent;
-      document.body.appendChild(newScript);
-    });
-
-    // Tampilkan body content-nya
-    document.body.innerHTML = tempDiv.querySelector('body')?.innerHTML || '';
-
+    // Print hasil decode ke halaman (bukan render HTML ya, tapi tampil mentah)
+    document.body.innerHTML = `<pre style="background:#111; color:#eee; padding:20px; overflow:auto;">${result}</pre>`;
   })
   .catch(err => {
-    document.body.innerHTML = "<h1 style='color:red'>Error load content!</h1>";
+    document.body.innerHTML = "<h1 style='color:red'>Gagal load enc.txt!</h1>";
     console.error(err);
   });
