@@ -1,1 +1,120 @@
-<script src="cloudflare-client.js"></script>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Smart Web Scraper & Downloader</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    /* Custom Scrollbar */
+    textarea::-webkit-scrollbar {
+      width: 8px;
+    }
+    textarea::-webkit-scrollbar-track {
+      background: #4a5568; /* bg-gray-700 */
+      border-radius: 4px;
+    }
+    textarea::-webkit-scrollbar-thumb {
+      background: #4299e1; /* bg-blue-500 */
+      border-radius: 4px;
+    }
+    textarea::-webkit-scrollbar-thumb:hover {
+      background: #3182ce; /* bg-blue-600 */
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 to-gray-800 text-white p-6 min-h-screen flex flex-col items-center justify-center">
+
+  <div class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-2xl transform transition duration-300 hover:scale-105">
+    <h1 class="text-4xl font-extrabold mb-6 text-center text-blue-400">
+      <i class="fas fa-spider mr-3"></i>Smart Web Scraper
+      <span class="text-xl text-gray-400 block mt-1">(Client-only)</span>
+    </h1>
+
+    <div class="flex flex-col md:flex-row gap-3 mb-6">
+      <input id="urlInput" type="text" placeholder="Masukkan URL (CORS only)" class="flex-grow p-3 text-black rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <button onclick="scrape()" class="bg-blue-600 hover:bg-blue-700 transition duration-200 px-6 py-3 rounded-lg flex items-center justify-center font-semibold">
+        <i class="fas fa-search mr-2"></i> Scrape
+      </button>
+    </div>
+
+    <div id="output" class="mb-5 text-gray-400 text-center text-sm italic">
+      Hasil scrape muncul di sini.
+    </div>
+
+    <textarea id="resultArea" class="w-full h-64 p-4 text-black rounded-lg mb-4 resize-y border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono text-sm" placeholder="Hasil HTML akan muncul di sini..."></textarea>
+
+    <div class="flex flex-col md:flex-row gap-3">
+      <button onclick="copyResult()" class="bg-green-600 hover:bg-green-700 transition duration-200 px-6 py-3 rounded-lg flex items-center justify-center font-semibold flex-grow">
+        <i class="fas fa-copy mr-2"></i> Copy HTML
+      </button>
+      <button onclick="downloadResult()" class="bg-purple-600 hover:bg-purple-700 transition duration-200 px-6 py-3 rounded-lg flex items-center justify-center font-semibold flex-grow">
+        <i class="fas fa-download mr-2"></i> Download
+      </button>
+    </div>
+  </div>
+
+  <script>
+    async function scrape() {
+      const url = document.getElementById("urlInput").value;
+      document.getElementById("output").innerText = "Sedang melakukan scrape...";
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const html = await response.text();
+
+        // Ganti relative URL → absolute
+        const fixedHtml = html.replace(/(href|src)=["'](\/[^"']*)["']/g, (match, p1, p2) => {
+          // Pastikan URL dasar tidak berakhir dengan '/' kecuali jika path relatif juga dimulai dengan '/'
+          const baseUrl = url.endsWith('/') && p2.startsWith('/') ? url.slice(0, -1) : url;
+          return `${p1}="${baseUrl}${p2}"`;
+        });
+
+        document.getElementById("resultArea").value = fixedHtml;
+        document.getElementById("output").innerText = "✅ Berhasil scrape!";
+      } catch (e) {
+        document.getElementById("output").innerText = `❌ Gagal scrape: ${e.message}. Pastikan URL benar dan mendukung CORS.`;
+      }
+    }
+
+    function copyResult() {
+      const textArea = document.getElementById("resultArea");
+      if (!textArea.value) {
+        document.getElementById("output").innerText = "⚠️ Tidak ada hasil untuk dicopy!";
+        return;
+      }
+      textArea.select();
+      document.execCommand("copy");
+      document.getElementById("output").innerText = "📋 Berhasil copy ke clipboard!";
+    }
+
+    async function downloadResult() {
+      const text = document.getElementById("resultArea").value;
+      if (!text) {
+        document.getElementById("output").innerText = "⚠️ Tidak ada hasil untuk didownload!";
+        return;
+      }
+      document.getElementById("output").innerText = "⏳ Sedang menyiapkan download...";
+      try {
+        const hashBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        // Buat nama file yang sedikit lebih panjang dan random
+        const randomName = hashHex.substring(0, Math.floor(Math.random() * 8) + 8);
+
+        const blob = new Blob([text], { type: "text/html" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `${randomName}.html`;
+        document.body.appendChild(link); // Penting untuk Firefox
+        link.click();
+        document.body.removeChild(link); // Bersihkan elemen setelah digunakan
+        document.getElementById("output").innerText = "💾 File berhasil didownload!";
+      } catch (e) {
+        document.getElementById("output").innerText = `❌ Gagal download: ${e.message}`;
+      }
+    }
+  </script>
+</body>
+</html>
